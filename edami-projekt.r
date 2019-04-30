@@ -2,17 +2,13 @@ library(cluster)
 
 data("USArrests")
 df <- scale(USArrests)
-head(df, n = 3)
 
-pam.res <- pam(df, 8, do.swap = FALSE, trace.lev=10, stand=FALSE)
-print(pam.res)
-str(pam.res)
-View(df)
+pam.res <- pam(df, 4)
 
 
 # my pam implementation
 
-k <- 8
+k <- 4
 euc.dist <- function(x1, x2) sqrt(sum((x1 - x2) ^ 2))
 
 # Function to compute dissimilarity of an object x
@@ -27,6 +23,25 @@ computeC <- function(i, j, C, d) {
 
 distToMedoids <- function(j, C, d) {
   sapply(C, function(n) euc.dist(d[j, ], d[n, ]))
+}
+
+compute_C <- function(i, j, h, d, s, df) {
+  C_jih <- 0
+
+  if (euc.dist(df[j, ], df[i, ]) > d &
+      euc.dist(df[j, ], df[h, ]) > d) {
+      C_jih <- 0
+  } else if (euc.dist(df[j,], df[i, ]) == d) {
+    if (euc.dist(df[j, ], df[h, ]) < s) {
+      C_jih <- euc.dist(df[j, ], df[h, ]) - d
+    } else {
+      C_jih <- s - d
+    }
+  } else if (euc.dist(df[j,], df[h, ]) < d) {
+    C_jih <- euc.dist(df[j,], df[h, ]) - d
+  }
+  
+  C_jih
 }
 
 # BUILD STEP
@@ -58,5 +73,45 @@ while (length(C) != k) {
   O <- O[-s]
 }
 
+i = 0
+while (TRUE) {
+
 dists <- lapply(O, function(j) sort(distToMedoids(j, C, df)))
-View(dists)
+
+D <- lapply(dists, function(j) j[1])
+S <- lapply(dists, function(j) j[2])
+
+
+# consider all possible swaps
+T <- sapply(C, function(i) sapply(O,
+                function(h) sum(sapply(1:length(O),
+                  function(j) {
+                    if (O[[j]] != i)
+                      compute_C(i, O[[j]], h, D[[j]], S[[j]], df)
+                    else
+                      0
+                  }))))
+
+T.min <- min(T)
+
+
+if (T.min >= 0)
+  break
+
+indices <- which(T == T.min, arr.ind = TRUE)
+
+nO <- indices[1, 2]
+nC <- indices[1, 1]
+
+O <- append(O, C[[nO]])
+C <- append(C, O[[nC]])
+
+O <- O[-nC]
+C <- C[-nO]
+
+print(unlist(O))
+print(unlist(C))
+}
+
+df[unlist(C),]
+pam.res$medoids
