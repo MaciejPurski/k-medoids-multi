@@ -3,12 +3,15 @@ library(cluster)
 data("USArrests")
 df <- scale(USArrests)
 
-pam.res <- pam(df, 4)
+args = commandArgs(trailingOnly=TRUE)
+
+k <- args[1]
+k <- 8
+
+pam.res <- pam(df, k)
 
 
 # my pam implementation
-
-k <- 4
 euc.dist <- function(x1, x2) sqrt(sum((x1 - x2) ^ 2))
 
 # Function to compute dissimilarity of an object x
@@ -78,40 +81,34 @@ while (TRUE) {
 
 dists <- lapply(O, function(j) sort(distToMedoids(j, C, df)))
 
-D <- lapply(dists, function(j) j[1])
-S <- lapply(dists, function(j) j[2])
+D <- sapply(dists, function(j) j[1])
+S <- sapply(dists, function(j) j[2])
 
 
 # consider all possible swaps
 T <- sapply(C, function(i) sapply(O,
                 function(h) sum(sapply(1:length(O),
                   function(j) {
-                    if (O[[j]] != i)
-                      compute_C(i, O[[j]], h, D[[j]], S[[j]], df)
+                    if (O[[j]] != h)
+                      compute_C(i, O[[j]], h, D[j], S[j], df)
                     else
                       0
                   }))))
 
 T.min <- min(T)
 
-
-if (T.min >= 0)
+print(T.min)
+print(df[unlist(C),])
+if (T.min > 0)
   break
 
 indices <- which(T == T.min, arr.ind = TRUE)
 
-nO <- indices[1, 2]
-nC <- indices[1, 1]
-
-O <- append(O, C[[nO]])
-C <- append(C, O[[nC]])
-
-O <- O[-nC]
-C <- C[-nO]
-
-print(unlist(O))
-print(unlist(C))
+newMedoid <- O[[indices[1]]]
+O[[indices[1]]] <- C[[indices[2]]]
+C[[indices[2]]] <- newMedoid
 }
 
 df[unlist(C),]
 pam.res$medoids
+pam.res$objective
