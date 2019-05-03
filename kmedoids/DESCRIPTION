@@ -1,0 +1,9 @@
+Package: kmedoids
+Title: kmedoids PAM multithread
+Version: 0.0.0.9000
+Authors@R: person("Maciej", "Purski", email = "maciej.purski@gmail.om", role = c("aut", "cre"))
+Description: This package allows to calculate PAM algorithm on multiple threads.
+Depends: R (>= 3.4.4)
+License: GPLv2
+Encoding: UTF-8
+LazyData: true
