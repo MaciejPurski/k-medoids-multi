@@ -22,8 +22,9 @@ diss2 <- function(i, j) {
 }
 
 diss.matrix <- lapply(seq(to=nrow(df)), function(i) {
-  if (i + 1 <= nrow(df)) sapply(seq(from=i+1, nrow(df)), function(j) euc.dist(df[i,], df[j, ]))})
+                sapply(seq(from=i, nrow(df)), function(j) euc.dist(df[i,], df[j, ]))})
 diss.matrix[[50]] <- 0L
+View(diss.matrix)
 
 # function to obtain dissimilarities
 diss <- function(i, j) {

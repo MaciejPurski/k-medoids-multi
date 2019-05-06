@@ -4,9 +4,9 @@ kmedoidsMulti <- function(df, k, threads=1) {
   
   # function to obtain dissimilarity from the dissimilarity matrix
   diss <- function(i, j) {
-    if (i == j)
-      return(0)
-    diss.matrix[[min(i,j)]][max(i,j) - min(i,j)]
+    min.elem <- min(i, j)
+    max.elem <- max(i, j)
+    diss.matrix[[min.elem]][max.elem - min.elem + 1]
   }
   
   # function to compute dissimilarity with closest medoid
@@ -60,12 +60,12 @@ kmedoidsMulti <- function(df, k, threads=1) {
     diff
   }
   
-  #cl <- parallel::makeCluster(threads)
+  cl <- parallel::makeCluster(threads)
   
   # calculate dissimilarity matrix
-  diss.matrix <- lapply(seq(to=nrow(df)), function(i) {
-    if (i + 1 <= nrow(df)) sapply(seq(from=i+1, nrow(df)), function(j) euc.dist(df[i,], df[j, ]))})
-  diss.matrix[[nrow(df)]] <- 0L
+  diss.matrix <- parallel::parLapply(cl, seq(to=nrow(df)), function(i) {
+                    sapply(seq(from=i, nrow(df)), function(j) euc.dist(df[i,], df[j, ]))})
+
 
   # initialize O - not medoids, C - medoids
   O <- 1:nrow(df)
@@ -80,9 +80,9 @@ kmedoidsMulti <- function(df, k, threads=1) {
   # goes until k medoids are found
   while (length(C) != k) {
     # search for candidates
-    M.closest <- sapply(O, function(j) dissToClosestMedoid(j))
+    M.closest <- parallel::parSapply(cl, O, function(j) dissToClosestMedoid(j))
 
-    M <- sapply(O, function(i) sum(sapply(1:length(O), function(j) computeM(i, j))))
+    M <- parallel::parSapply(cl, O, function(i) sum(sapply(1:length(O), function(j) computeM(i, j))))
     best.candidate <- which.min(M)
     C <- append(C, O[best.candidate])
     O <- O[-best.candidate]
@@ -113,7 +113,7 @@ kmedoidsMulti <- function(df, k, threads=1) {
     C[indices[2]] <- newMedoid
   }
   
-  #stopCluster(cl)
+  parallel::stopCluster(cl)
   
   swapObj <- sum(O$dissToMed) / nrow(df)
   
