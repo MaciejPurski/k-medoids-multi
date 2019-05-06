@@ -98,7 +98,8 @@ kmedoidsMulti <- function(df, k, threads=1) {
     updateElements()
     
     # T is a matrix which keeps results of swapping i medoid with h non-medoid
-    T <- sapply(C, function(i) apply(O, 1, function(h) compute(i, h)))
+    T <- parallel::parApply(cl, O, 1, function(h) sapply(C, function(i) compute(i, h)))
+#    T <- sapply(C, function(i) apply(O, 1, function(h) compute(i, h)))
 
     T.min <- min(T)
 
@@ -108,9 +109,9 @@ kmedoidsMulti <- function(df, k, threads=1) {
     indices <- which(T == T.min, arr.ind = TRUE)
     
     # swap medoids
-    newMedoid <- O[indices[1], "id"]
-    O[indices[1], "id"] <- C[indices[2]]
-    C[indices[2]] <- newMedoid
+    newMedoid <- O[indices[2], "id"]
+    O[indices[2], "id"] <- C[indices[1]]
+    C[indices[1]] <- newMedoid
   }
   
   parallel::stopCluster(cl)
