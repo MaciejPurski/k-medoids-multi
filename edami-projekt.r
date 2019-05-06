@@ -8,12 +8,18 @@ args = commandArgs(trailingOnly=TRUE)
 k <- args[1]
 k <- 8
 
-pam.res <- pam(df, k)
-
+pam.res <- pam(df, 8, trace.lev = 100)
 
 # my pam implementation
 euc.dist <- function(x1, x2) sqrt(sum((x1 - x2) ^ 2))
 
+
+
+diss <- lapply(seq(to=nrow(df)), function(i) {
+              if (i + 1 > nrow(df)) return()
+              sapply(seq(from=i+1, nrow(df)), function(j) euc.dist(df[i,], df[j, ]))}
+              )
+length(unlist(diss))
 # Function to compute dissimilarity of an object x
 # to the closest object in S
 dissToClosest <- function(x, C, d) {
@@ -54,13 +60,14 @@ O <- 1:nrow(df)
 C <- list()
 
 
+
 sumOfDistances <- lapply(O,
                   function(i) Reduce("+", lapply(O,
                   function(j) euc.dist(df[i,], df[j,]))))
 
 # C - selected
 C <- append(C, which.min(sumOfDistances))
-
+C
 # O - unselected
 O <- O[-unlist(C)]
 

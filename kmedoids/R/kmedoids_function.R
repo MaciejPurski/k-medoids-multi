@@ -2,11 +2,6 @@ kmedoidsMulti <- function(df, k, threads=1) {
   # function to calculate euclidean distance
   euc.dist <- function(x1, x2) sqrt(sum((x1 - x2) ^ 2))
   
-  # calculate dissimilarity matrix
-  diss.matrix <- lapply(seq(to=nrow(df)), function(i) {
-    if (i + 1 <= nrow(df)) sapply(seq(from=i+1, nrow(df)), function(j) euc.dist(df[i,], df[j, ]))})
-  diss.matrix[[50]] <- 0L
-  
   # function to obtain dissimilarity from the dissimilarity matrix
   diss <- function(i, j) {
     if (i == j)
@@ -22,10 +17,10 @@ kmedoidsMulti <- function(df, k, threads=1) {
   # function used in BUILD step in order to find out
   # if an object j will be assigned co candidate i or one of the existing medoids
   computeM <- function(i, j) {
-    if (i == j)
+    if (i == O[j])
       return(0)
     
-    min(dissToClosestMedoid(j), diss(i, j))
+    min(M.closest[j], diss(i, O[j]))
   }
   
   updateElements <- function() {
@@ -64,11 +59,18 @@ kmedoidsMulti <- function(df, k, threads=1) {
     
     diff
   }
+  
+  #cl <- parallel::makeCluster(threads)
+  
+  # calculate dissimilarity matrix
+  diss.matrix <- lapply(seq(to=nrow(df)), function(i) {
+    if (i + 1 <= nrow(df)) sapply(seq(from=i+1, nrow(df)), function(j) euc.dist(df[i,], df[j, ]))})
+  diss.matrix[[nrow(df)]] <- 0L
 
   # initialize O - not medoids, C - medoids
   O <- 1:nrow(df)
   C <- c()
-  
+
   # calculate first medoid
   sumOfDistances <- sapply(O, function(i) sum(sapply(O, function(j) {diss(i, j)})))
   C <- append(C, which.min(sumOfDistances))
@@ -78,7 +80,9 @@ kmedoidsMulti <- function(df, k, threads=1) {
   # goes until k medoids are found
   while (length(C) != k) {
     # search for candidates
-    M <- sapply(O, function(i) sum(sapply(O, function(j) computeM(i, j))))
+    M.closest <- sapply(O, function(j) dissToClosestMedoid(j))
+
+    M <- sapply(O, function(i) sum(sapply(1:length(O), function(j) computeM(i, j))))
     best.candidate <- which.min(M)
     C <- append(C, O[best.candidate])
     O <- O[-best.candidate]
@@ -95,8 +99,9 @@ kmedoidsMulti <- function(df, k, threads=1) {
     
     # T is a matrix which keeps results of swapping i medoid with h non-medoid
     T <- sapply(C, function(i) apply(O, 1, function(h) compute(i, h)))
-    
+
     T.min <- min(T)
+
     if (T.min >= 0)
       break
 
@@ -107,6 +112,8 @@ kmedoidsMulti <- function(df, k, threads=1) {
     O[indices[1], "id"] <- C[indices[2]]
     C[indices[2]] <- newMedoid
   }
+  
+  #stopCluster(cl)
   
   swapObj <- sum(O$dissToMed) / nrow(df)
   

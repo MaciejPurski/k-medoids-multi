@@ -17,8 +17,19 @@ pam.res <- pam(df, k, trace.lev = 100,stand=FALSE)
 # my pam implementation
 euc.dist <- function(x1, x2) sqrt(sum((x1 - x2) ^ 2))
 
-diss <- function(i, j) {
+diss2 <- function(i, j) {
   return(euc.dist(df[i,], df[j, ]))
+}
+
+diss.matrix <- lapply(seq(to=nrow(df)), function(i) {
+  if (i + 1 <= nrow(df)) sapply(seq(from=i+1, nrow(df)), function(j) euc.dist(df[i,], df[j, ]))})
+diss.matrix[[50]] <- 0L
+
+# function to obtain dissimilarities
+diss <- function(i, j) {
+  if (i == j)
+    return(0)
+  diss.matrix[[min(i,j)]][max(i,j) - min(i,j)]
 }
 
 updateElements <- function() {
@@ -31,28 +42,7 @@ updateElements <- function() {
   O
 }
 
-compute <- function(i, h) {
-  # difference when h is not counted anymore to whole cost
-  diff <- -h[["dissToMed"]]
-  
-  # difference when i is no longer a medoid and starts counting to the cost
-  d <- dissToMedoids(i)
-  sec <- min(d[d != min(d)])
-  diff <- diff + min(sec, diss(i, h[["id"]]))
 
-  diff <- diff + sum(apply(O, 1, function(j) {
-    if (j[["id"]] == h[["id"]])
-      return(0)
-    if (i == j[["med"]]) {
-      min(diss(j[["id"]], h[["id"]]), j[["dissToSecond"]]) - j[["dissToMed"]]
-    } else {
-      min(diss(j[["id"]], h[["id"]]) - j[["dissToMed"]], 0)
-    }
-  }))
-
-
-  diff
-}
 
 dissToMedoids <- function(i) {
   sapply(C, function(j) diss(i, j))
@@ -63,16 +53,7 @@ compute2 <- function(i, j, h) {
     return(0)
 }
 
-dissToClosestMedoid <- function(j) {
-  min(sapply(C, function(n) diss(j, n)))
-}
 
-computeM <- function(i, j) {
-  if (i == j)
-    return(0)
-  
-  min(dissToClosestMedoid(j), diss(i, j))
-}
 
 O <- 1:nrow(df)
 C <- c()
