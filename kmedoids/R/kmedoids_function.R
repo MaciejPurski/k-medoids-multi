@@ -26,8 +26,7 @@ kmedoidsMulti <- function(df, k, threads=1) {
   updateElements <- function() {
     # calculate distances to medoids
     d <- sapply(1:nrow(O), function(i) sapply(C, function(j) diss(O[i, "id"], j)))
-    
-    # find closest medoid
+  
     O$med <<- apply(d, 2, function(i) C[which.min(i)])
     O$dissToMed <<- apply(O, 1, function(i) diss(i[["id"]], i[["med"]]))
     
@@ -93,25 +92,36 @@ kmedoidsMulti <- function(df, k, threads=1) {
   # O becomes data frame consisting of all the informations needed on medoids calculation
   O <- data.frame(id = O, med = 1:length(O), dissToMed = 1:length(O), dissToSecond = 1:length(O))
   
+  if (k == 1) {
+    res <- list(
+      medoids = df[C,],
+      id.med = C,
+      clustering = setNames(apply(O, 1, function(i) C),
+                            apply(O, 1, function(i) row.names(df)[i[["id"]]])),
+      objective = setNames(c(buildObj, buildObj),
+                           c("build", "swap"))
+    )
+    
+    return(res)
+    
+  }
   # SWAP PHASE
   while (TRUE) {
-    updateElements()
+      updateElements()
+
+      T <- parallel::parApply(cl, O, 1, function(h) sapply(C, function(i) compute(i, h)))
+
+      T.min <- min(T)
+
+      if (T.min >= 0)
+        break
+
+      indices <- which(T == T.min, arr.ind = TRUE)
     
-    # T is a matrix which keeps results of swapping i medoid with h non-medoid
-    T <- parallel::parApply(cl, O, 1, function(h) sapply(C, function(i) compute(i, h)))
-#    T <- sapply(C, function(i) apply(O, 1, function(h) compute(i, h)))
-
-    T.min <- min(T)
-
-    if (T.min >= 0)
-      break
-
-    indices <- which(T == T.min, arr.ind = TRUE)
-    
-    # swap medoids
-    newMedoid <- O[indices[2], "id"]
-    O[indices[2], "id"] <- C[indices[1]]
-    C[indices[1]] <- newMedoid
+      # swap medoids
+      newMedoid <- O[indices[2], "id"]
+      O[indices[2], "id"] <- C[indices[1]]
+      C[indices[1]] <- newMedoid
   }
   
   parallel::stopCluster(cl)
